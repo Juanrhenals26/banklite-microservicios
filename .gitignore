@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+venv/
+.venv/
+env/
+
+# Entorno y secretos
+.env
+*.env
+!.env.example
+
+# Bases de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Herramientas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ofimatica temporal
+~$*
+*.tmp
+
+# Entregas de otras materias que comparten esta carpeta de Windows
+entregas anteriores/
