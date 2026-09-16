@@ -1,0 +1,89 @@
+services:
+  identity-db:
+    image: postgres:16-alpine
+    container_name: banklite-identity-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: identity_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d identity_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  account-db:
+    image: postgres:16-alpine
+    container_name: banklite-account-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: account_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d account_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: banklite-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: banklite
+      RABBITMQ_DEFAULT_PASS: banklite
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  identity-service:
+    build: ./services/identity-service
+    container_name: banklite-identity-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@identity-db:5432/identity_db
+      RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
+      EVENTS_EXCHANGE: banklite.events
+      ENABLE_EVENTS: "true"
+    ports:
+      - "8001:8001"
+    depends_on:
+      identity-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  account-service:
+    build: ./services/account-service
+    container_name: banklite-account-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@account-db:5432/account_db
+      IDENTITY_SERVICE_URL: http://identity-service:8001
+      RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
+      EVENTS_EXCHANGE: banklite.events
+      EVENTS_QUEUE: account.identity-verified
+      ENABLE_CONSUMER: "true"
+    ports:
+      - "8002:8002"
+    depends_on:
+      account-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+
+volumes:
+  identity-db-data:
+  account-db-data:
