@@ -4,6 +4,15 @@ Implementación de dos microservicios de la plataforma de banca digital **BankLi
 de forma autónoma, con persistencia propia por servicio y comunicación **síncrona (REST)** y
 **asíncrona (eventos sobre RabbitMQ)** entre ellos.
 
+## Alcance de esta entrega
+
+Esta entrega implementa y prueba **2 de los 9 microservicios** que componen el diseño completo de
+BankLite: `identity-service` y `account-service`. El resto de los diagramas de este repositorio
+(secuencia de transferencia con Saga, autorización de tarjeta con detección de fraude, topología
+de despliegue) documentan la **arquitectura objetivo de todo el sistema**, para dar contexto de
+hacia dónde escala el proyecto — esos otros microservicios (Ledger, Transfer, Card, Fraud,
+Notification, Compliance) todavía no tienen código en este repositorio.
+
 ## Arquitectura
 
 ![Arquitectura de microservicios](banklite_arquitectura_microservicios.svg)
