@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>BankLite — Secuencia: apertura de cuenta (KYC)</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#ffffff; color:#1a1a1a; margin:0; padding:24px; }
+  @media (prefers-color-scheme: dark) { body { background:#1a1a1a; color:#e5e5e5; } }
+  h1 { font-size:18px; font-weight:600; margin-bottom:16px; }
+  #diagram { max-width:900px; margin:0 auto; }
+</style>
+</head>
+<body>
+<h1>BankLite — Apertura de cuenta con verificación KYC</h1>
+<div id="diagram">Cargando diagrama… (requiere conexión a internet)</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', fontFamily: 'sans-serif' });
+const { svg } = await mermaid.render('seq1-svg', `sequenceDiagram
+  participant U as Usuario
+  participant GW as API Gateway
+  participant ID as Identity Service
+  participant KYC as Proveedor KYC (ext.)
+  participant AC as Account Service
+  U->>GW: Solicita registro
+  GW->>ID: Crea usuario
+  ID->>KYC: Verifica identidad
+  KYC-->>ID: Resultado de verificación
+  Note over ID: Publica identity.verified
+  ID--)AC: identity.verified (evento)
+  AC->>AC: Aplica límites por país
+  AC-->>U: Cuenta abierta`);
+document.getElementById('diagram').innerHTML = svg;
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>BankLite — Secuencia: autorización de tarjeta y fraude</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#ffffff; color:#1a1a1a; margin:0; padding:24px; }
+  @media (prefers-color-scheme: dark) { body { background:#1a1a1a; color:#e5e5e5; } }
+  h1 { font-size:18px; font-weight:600; margin-bottom:16px; }
+  #diagram { max-width:900px; margin:0 auto; }
+</style>
+</head>
+<body>
+<h1>BankLite — Autorización de tarjeta con detección de fraude</h1>
+<div id="diagram">Cargando diagrama… (requiere conexión a internet)</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', fontFamily: 'sans-serif' });
+const { svg } = await mermaid.render('seq3-svg', `sequenceDiagram
+  participant C as Comercio (POS)
+  participant CS as Card Service
+  participant PR as Procesador (Marqeta/Galileo)
+  participant LG as Ledger Service
+  participant FR as Fraud Service
+  participant NT as Notification Service
+  C->>CS: Solicita autorización de pago
+  CS->>PR: Autoriza transacción
+  PR-->>CS: Autorizado
+  CS->>LG: Registra asiento contable
+  CS--)FR: card.transaction.authorized (evento)
+  FR->>FR: Evalúa riesgo
+  alt Riesgo alto
+    FR--)NT: fraud.alert (evento)
+    FR->>CS: Bloqueo temporal de tarjeta
+    NT-->>C: Alerta de seguridad
+  else Riesgo normal
+    Note over FR: Sin acción adicional
+  end`);
+document.getElementById('diagram').innerHTML = svg;
+</script>
+</body>
+</html>

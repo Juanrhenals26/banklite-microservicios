@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>BankLite — Secuencia: transferencia con Saga</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#ffffff; color:#1a1a1a; margin:0; padding:24px; }
+  @media (prefers-color-scheme: dark) { body { background:#1a1a1a; color:#e5e5e5; } }
+  h1 { font-size:18px; font-weight:600; margin-bottom:16px; }
+  #diagram { max-width:900px; margin:0 auto; }
+</style>
+</head>
+<body>
+<h1>BankLite — Transferencia con validación de saldo y patrón Saga</h1>
+<div id="diagram">Cargando diagrama… (requiere conexión a internet)</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', fontFamily: 'sans-serif' });
+const { svg } = await mermaid.render('seq2-svg', `sequenceDiagram
+  participant U as Usuario
+  participant TR as Transfer Service
+  participant LG as Ledger Service
+  participant RL as Riel externo (ACH/SWIFT)
+  participant FR as Fraud Service
+  U->>TR: Solicita transferencia
+  TR->>LG: Consulta saldo disponible
+  LG-->>TR: Saldo suficiente
+  TR->>LG: Reserva fondos (asiento provisional)
+  TR->>RL: Envía orden de pago
+  alt Riel acepta
+    RL-->>TR: Confirmación
+    TR->>LG: Confirma asiento (transfer.completed)
+    TR--)FR: transfer.completed (evento)
+    TR-->>U: Transferencia exitosa
+  else Riel rechaza
+    RL-->>TR: Rechazo
+    TR->>LG: Compensación: revierte asiento
+    TR-->>U: Transferencia fallida
+  end`);
+document.getElementById('diagram').innerHTML = svg;
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>BankLite — Modelo entidad-relación (por servicio)</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#ffffff; color:#1a1a1a; margin:0; padding:24px; }
+  @media (prefers-color-scheme: dark) { body { background:#1a1a1a; color:#e5e5e5; } }
+  h1 { font-size:18px; font-weight:600; margin-bottom:8px; }
+  p.note { font-size:13px; color:#666; margin-top:0; margin-bottom:16px; }
+  @media (prefers-color-scheme: dark) { p.note { color:#aaa; } }
+  #diagram { max-width:1100px; margin:0 auto; }
+</style>
+</head>
+<body>
+<h1>BankLite — Modelo de datos por microservicio</h1>
+<p class="note">Cada microservicio tiene su propia base de datos (database-per-service). Las relaciones entre entidades de distintos servicios son lógicas, vía IDs — no llaves foráneas de base de datos reales.</p>
+<div id="diagram">Cargando diagrama… (requiere conexión a internet)</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', fontFamily: 'sans-serif' });
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  USERS ||--o{ KYC_RECORDS : verifica
+  USERS ||--o{ ACCOUNTS : posee
+  ACCOUNTS ||--o{ LEDGER_ENTRIES : registra
+  ACCOUNTS ||--o{ CARDS : emite
+  ACCOUNTS ||--o{ TRANSFERS : "origina o recibe"
+  CARDS ||--o{ CARD_TRANSACTIONS : autoriza
+  TRANSFERS ||--o| RISK_SCORES : evalua
+  CARD_TRANSACTIONS ||--o| RISK_SCORES : evalua
+  RISK_SCORES ||--o{ FLAGGED_TRANSACTIONS : marca
+  FLAGGED_TRANSACTIONS ||--o| SUSPICIOUS_ACTIVITY_REPORTS : reporta
+  USERS {
+    uuid id PK
+    string email
+    string phone
+    string status
+  }
+  KYC_RECORDS {
+    uuid id PK
+    uuid user_id FK
+    string document_type
+    string verification_status
+  }
+  ACCOUNTS {
+    uuid id PK
+    uuid user_id FK
+    string status
+    string currency
+    decimal daily_limit
+    decimal monthly_limit
+  }
+  LEDGER_ENTRIES {
+    uuid id PK
+    uuid account_id FK
+    decimal debit
+    decimal credit
+    uuid transaction_id
+    timestamp created_at
+  }
+  TRANSFERS {
+    uuid id PK
+    uuid from_account FK
+    uuid to_account FK
+    decimal amount
+    string status
+    string rail
+  }
+  CARDS {
+    uuid id PK
+    uuid account_id FK
+    string last4
+    string status
+  }
+  CARD_TRANSACTIONS {
+    uuid card_id FK
+    string merchant
+    decimal amount
+    timestamp authorized_at
+  }
+  RISK_SCORES {
+    uuid transaction_id PK
+    decimal score
+    string model_version
+  }
+  FLAGGED_TRANSACTIONS {
+    uuid id PK
+    string reason
+    string reviewed_by
+    string resolution
+  }
+  SUSPICIOUS_ACTIVITY_REPORTS {
+    uuid id PK
+    uuid transaction_id FK
+    string status
+  }`);
+document.getElementById('diagram').innerHTML = svg;
+</script>
+</body>
+</html>
