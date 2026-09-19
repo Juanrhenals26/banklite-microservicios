@@ -2,7 +2,7 @@
 
 Toda apertura de cuenta valida contra Identity en tiempo real: el evento
 asincrono dice que el usuario fue verificado, pero antes de crear la cuenta se
-confirma el estado actual del usuario con una llamada directa.
+confirma el estado actual del usuario con una llamada directa a GET /users/{id}.
 """
 
 import logging
@@ -19,9 +19,10 @@ class IdentityUnavailable(RuntimeError):
     """identity-service no respondio. Se traduce a un 503 hacia el cliente."""
 
 
-def get_user(user_id: uuid.UUID) -> dict | None:
-    """Devuelve el usuario, o None si Identity responde 404."""
-    url = f"{settings.identity_service_url}/users/{user_id}"
+def get_user(id_usuario: uuid.UUID) -> dict | None:
+    """Devuelve el usuario (con sus campos id_usuario, estado, pais_residencia,
+    email...) o None si Identity responde 404."""
+    url = f"{settings.identity_service_url}/users/{id_usuario}"
     try:
         response = httpx.get(url, timeout=settings.identity_timeout_seconds)
     except httpx.RequestError as exc:

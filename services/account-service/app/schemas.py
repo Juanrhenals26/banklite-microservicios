@@ -1,65 +1,94 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AccountCreate(BaseModel):
-    user_id: uuid.UUID
-    currency: str | None = Field(
+    id_usuario: uuid.UUID
+    moneda: str | None = Field(
         default=None,
         min_length=3,
         max_length=3,
         description="Opcional. Si se omite se usa la moneda regulatoria del pais del usuario.",
     )
 
-    @field_validator("currency")
+    @field_validator("moneda")
     @classmethod
-    def currency_upper(cls, v: str | None) -> str | None:
+    def moneda_upper(cls, v: str | None) -> str | None:
         if v is None:
             return v
         if not v.isalpha():
-            raise ValueError("currency debe ser un codigo ISO de 3 letras, por ejemplo COP")
+            raise ValueError("moneda debe ser un codigo ISO de 3 letras, por ejemplo COP")
         return v.upper()
 
 
-class AccountOut(BaseModel):
+class LimiteOperativoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: uuid.UUID
-    user_id: uuid.UUID
-    status: str
-    currency: str
-    country: str
-    daily_limit: Decimal
-    monthly_limit: Decimal
-    created_at: datetime
+    id_limite: uuid.UUID
+    tipo_limite: str
+    monto_maximo: Decimal
+    periodo: str
 
 
-class AccountCreated(BaseModel):
-    account: AccountOut
-    validated_via: str
-    event_projection_hit: bool
+class RestriccionRegulatoriaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_restriccion: uuid.UUID
+    pais: str
+    descripcion: str | None
+    fecha_aplicacion: date
+
+
+class CuentaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_cuenta: uuid.UUID
+    id_usuario: uuid.UUID
+    tipo_cuenta: str
+    moneda: str
+    estado: str
+    fecha_apertura: datetime
+    fecha_cierre: datetime | None
+
+
+class CuentaCreada(BaseModel):
+    cuenta: CuentaOut
+    limites: list[LimiteOperativoOut]
+    restriccion: RestriccionRegulatoriaOut
+    validado_via: str
+    evento_proyeccion_encontrada: bool
 
 
 class AccountStatusUpdate(BaseModel):
-    status: str
+    estado: str
 
-    @field_validator("status")
+    @field_validator("estado")
     @classmethod
-    def valid_status(cls, v: str) -> str:
-        allowed = {"active", "suspended", "closed"}
+    def estado_valido(cls, v: str) -> str:
+        allowed = {"activa", "suspendida", "cerrada"}
         if v not in allowed:
-            raise ValueError(f"status debe ser uno de: {', '.join(sorted(allowed))}")
+            raise ValueError(f"estado debe ser uno de: {', '.join(sorted(allowed))}")
         return v
 
 
-class VerifiedUserOut(BaseModel):
+class UsuarioVerificadoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user_id: uuid.UUID
+    id_usuario: uuid.UUID
     email: str
-    country: str
-    verified_at: str
-    received_at: datetime
+    pais_residencia: str
+    verificado_en: str
+    recibido_en: datetime
+
+
+class TransferenciaRecibidaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_transferencia: uuid.UUID
+    id_cuenta_origen: uuid.UUID
+    monto: Decimal
+    estado: str
+    recibido_en: datetime

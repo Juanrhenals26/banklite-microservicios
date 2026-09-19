@@ -72,7 +72,7 @@ services:
       IDENTITY_SERVICE_URL: http://identity-service:8001
       RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
       EVENTS_EXCHANGE: banklite.events
-      EVENTS_QUEUE: account.identity-verified
+      EVENTS_QUEUE: account.events
       ENABLE_CONSUMER: "true"
     ports:
       - "8002:8002"
@@ -84,6 +84,94 @@ services:
       identity-service:
         condition: service_started
 
+  ledger-db:
+    image: postgres:16-alpine
+    container_name: banklite-ledger-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: ledger_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - ledger-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d ledger_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  transfer-db:
+    image: postgres:16-alpine
+    container_name: banklite-transfer-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: transfer_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - transfer-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d transfer_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ledger-service:
+    build: ./services/ledger-service
+    container_name: banklite-ledger-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@ledger-db:5432/ledger_db
+      ACCOUNT_SERVICE_URL: http://account-service:8002
+    ports:
+      - "8003:8003"
+    depends_on:
+      ledger-db:
+        condition: service_healthy
+      account-service:
+        condition: service_started
+
+  transfer-service:
+    build: ./services/transfer-service
+    container_name: banklite-transfer-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@transfer-db:5432/transfer_db
+      ACCOUNT_SERVICE_URL: http://account-service:8002
+      LEDGER_SERVICE_URL: http://ledger-service:8003
+      RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
+      EVENTS_EXCHANGE: banklite.events
+      ENABLE_EVENTS: "true"
+    ports:
+      - "8004:8004"
+    depends_on:
+      transfer-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      account-service:
+        condition: service_started
+      ledger-service:
+        condition: service_started
+
+  web-panel:
+    build:
+      context: ./services/web-panel
+      args:
+        # El navegador del usuario corre FUERA de la red de Docker, por eso
+        # aqui se usa localhost y los puertos publicados, no los nombres
+        # internos de los contenedores (identity-service, account-service).
+        NEXT_PUBLIC_IDENTITY_API_URL: http://localhost:8001
+        NEXT_PUBLIC_ACCOUNT_API_URL: http://localhost:8002
+    container_name: banklite-web-panel
+    ports:
+      - "3000:3000"
+    depends_on:
+      - identity-service
+      - account-service
+
 volumes:
   identity-db-data:
   account-db-data:
+  ledger-db-data:
+  transfer-db-data:

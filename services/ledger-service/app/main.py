@@ -6,9 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import settings
-from .consumer import start_consumer, stop_consumer
 from .database import Base, engine
-from .routers import accounts
+from .routers import ledger
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(settings.service_name)
@@ -17,18 +16,16 @@ logger = logging.getLogger(settings.service_name)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
-    start_consumer()
     logger.info("%s iniciado", settings.service_name)
     yield
-    stop_consumer()
 
 
 app = FastAPI(
-    title="BankLite - Account Service",
+    title="BankLite - Ledger Service",
     description=(
-        "Microservicio de cuentas. Consume el evento identity.verified (asincrono) "
-        "y valida al usuario contra identity-service por REST (sincrono) antes de "
-        "abrir una cuenta con los limites regulatorios de su pais."
+        "Microservicio de contabilidad. Registra todos los movimientos mediante "
+        "el principio de doble partida y es la fuente de verdad del saldo de "
+        "cada cuenta. Valida sincronamente contra account-service."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -41,7 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(accounts.router)
+app.include_router(ledger.router)
 
 
 @app.get("/health", tags=["infra"])
