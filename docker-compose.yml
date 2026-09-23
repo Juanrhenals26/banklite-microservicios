@@ -163,6 +163,8 @@ services:
         # internos de los contenedores (identity-service, account-service).
         NEXT_PUBLIC_IDENTITY_API_URL: http://localhost:8001
         NEXT_PUBLIC_ACCOUNT_API_URL: http://localhost:8002
+        NEXT_PUBLIC_LEDGER_API_URL: http://localhost:8003
+        NEXT_PUBLIC_TRANSFER_API_URL: http://localhost:8004
     container_name: banklite-web-panel
     ports:
       - "3000:3000"
