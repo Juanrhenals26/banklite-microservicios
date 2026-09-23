@@ -8,11 +8,18 @@
 #    4 servicios web. Dale a "Apply".
 # 5. El primer despliegue tarda varios minutos (construye cada imagen Docker).
 #
-# Por que 4 bases de datos separadas y no una sola compartida: el documento
-# oficial del proyecto exige "database per service" (cada microservicio es
-# dueno de su propia base de datos, sin bases compartidas ni joins entre
-# microservicios). Usar una sola base para los 4 serviria para la demo, pero
-# contradice la arquitectura que estamos sustentando.
+# Nota sobre la base de datos: el plan gratuito de Render solo permite UNA
+# base de datos Postgres activa por cuenta (si el blueprint intenta crear 4,
+# las 3 restantes fallan con "cannot have more than one active free tier
+# database"). Por eso aqui usamos una sola instancia Postgres gratuita
+# (banklite-db) compartida por los 4 microservicios. Esto es una limitacion
+# de la cuenta gratuita de Render, no un cambio de arquitectura: cada
+# microservicio sigue siendo dueno exclusivo de sus propias tablas (usuario,
+# cuenta, transaccion, transferencia, etc. no se repiten entre servicios) y
+# ningun servicio hace queries ni joins sobre las tablas de otro. Si mas
+# adelante se sube a un plan de pago, basta con volver a separar esto en 4
+# bloques "databases" (uno por servicio) y apuntar cada DATABASE_URL a la
+# suya, sin tocar el codigo de los servicios.
 #
 # Nota sobre RabbitMQ: Render no ofrece RabbitMQ administrado gratis. Los 4
 # microservicios ya estan probados para degradar de forma segura si no
@@ -26,20 +33,8 @@
 # el archivo, para que no quede en el historial del repositorio).
 
 databases:
-  - name: banklite-identity-db
-    databaseName: identity_db
-    user: banklite
-    plan: free
-  - name: banklite-account-db
-    databaseName: account_db
-    user: banklite
-    plan: free
-  - name: banklite-ledger-db
-    databaseName: ledger_db
-    user: banklite
-    plan: free
-  - name: banklite-transfer-db
-    databaseName: transfer_db
+  - name: banklite-db
+    databaseName: banklite
     user: banklite
     plan: free
 
@@ -54,7 +49,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: banklite-identity-db
+          name: banklite-db
           property: connectionString
       - key: ENABLE_EVENTS
         value: "false"
@@ -69,7 +64,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: banklite-account-db
+          name: banklite-db
           property: connectionString
       - key: IDENTITY_SERVICE_URL
         value: https://banklite-identity-service.onrender.com
@@ -86,7 +81,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: banklite-ledger-db
+          name: banklite-db
           property: connectionString
       - key: ACCOUNT_SERVICE_URL
         value: https://banklite-account-service.onrender.com
@@ -101,7 +96,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: banklite-transfer-db
+          name: banklite-db
           property: connectionString
       - key: ACCOUNT_SERVICE_URL
         value: https://banklite-account-service.onrender.com
