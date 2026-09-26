@@ -1,11 +1,11 @@
-# Blueprint de Render para desplegar los 4 microservicios de BankLite de una sola vez.
+# Blueprint de Render para desplegar los 6 microservicios de BankLite de una sola vez.
 #
 # Como usarlo:
 # 1. Sube este archivo a la rama main de tu repo (ya viene incluido).
 # 2. En https://dashboard.render.com haz clic en "New +" -> "Blueprint".
 # 3. Conecta el repo "banklite-microservicios" y selecciona la rama main.
-# 4. Render va a leer este archivo y va a proponer crear 4 bases de datos y
-#    4 servicios web. Dale a "Apply".
+# 4. Render va a leer este archivo y va a proponer crear 1 base de datos y
+#    6 servicios web. Dale a "Apply".
 # 5. El primer despliegue tarda varios minutos (construye cada imagen Docker).
 #
 # Nota sobre la base de datos: el plan gratuito de Render solo permite UNA
@@ -103,4 +103,38 @@ services:
       - key: LEDGER_SERVICE_URL
         value: https://banklite-ledger-service.onrender.com
       - key: ENABLE_EVENTS
+        value: "false"
+
+  - type: web
+    name: banklite-card-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/card-service/Dockerfile
+    dockerContext: ./services/card-service
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: banklite-db
+          property: connectionString
+      - key: ACCOUNT_SERVICE_URL
+        value: https://banklite-account-service.onrender.com
+      - key: ENABLE_EVENTS
+        value: "false"
+
+  - type: web
+    name: banklite-fraud-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/fraud-service/Dockerfile
+    dockerContext: ./services/fraud-service
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: banklite-db
+          property: connectionString
+      - key: ENABLE_EVENTS
+        value: "false"
+      - key: ENABLE_CONSUMER
         value: "false"
