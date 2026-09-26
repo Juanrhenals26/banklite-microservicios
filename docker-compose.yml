@@ -154,26 +154,98 @@ services:
       ledger-service:
         condition: service_started
 
+  card-db:
+    image: postgres:16-alpine
+    container_name: banklite-card-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: card_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - card-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d card_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  card-service:
+    build: ./services/card-service
+    container_name: banklite-card-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@card-db:5432/card_db
+      ACCOUNT_SERVICE_URL: http://account-service:8002
+      RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
+      EVENTS_EXCHANGE: banklite.events
+      ENABLE_EVENTS: "true"
+    ports:
+      - "8005:8005"
+    depends_on:
+      card-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  fraud-db:
+    image: postgres:16-alpine
+    container_name: banklite-fraud-db
+    environment:
+      POSTGRES_USER: banklite
+      POSTGRES_PASSWORD: banklite
+      POSTGRES_DB: fraud_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - fraud-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banklite -d fraud_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  fraud-service:
+    build: ./services/fraud-service
+    container_name: banklite-fraud-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://banklite:banklite@fraud-db:5432/fraud_db
+      RABBITMQ_URL: amqp://banklite:banklite@rabbitmq:5672/
+      EVENTS_EXCHANGE: banklite.events
+      EVENTS_QUEUE: fraud.events
+      ENABLE_EVENTS: "true"
+      ENABLE_CONSUMER: "true"
+    ports:
+      - "8006:8006"
+    depends_on:
+      fraud-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   web-panel:
     build:
       context: ./services/web-panel
       args:
-        # El navegador del usuario corre FUERA de la red de Docker, por eso
-        # aqui se usa localhost y los puertos publicados, no los nombres
-        # internos de los contenedores (identity-service, account-service).
         NEXT_PUBLIC_IDENTITY_API_URL: http://localhost:8001
         NEXT_PUBLIC_ACCOUNT_API_URL: http://localhost:8002
         NEXT_PUBLIC_LEDGER_API_URL: http://localhost:8003
         NEXT_PUBLIC_TRANSFER_API_URL: http://localhost:8004
+        NEXT_PUBLIC_CARD_API_URL: http://localhost:8005
+        NEXT_PUBLIC_FRAUD_API_URL: http://localhost:8006
     container_name: banklite-web-panel
     ports:
       - "3000:3000"
     depends_on:
       - identity-service
       - account-service
+      - card-service
+      - fraud-service
 
 volumes:
   identity-db-data:
   account-db-data:
   ledger-db-data:
   transfer-db-data:
+  card-db-data:
+  fraud-db-data:
